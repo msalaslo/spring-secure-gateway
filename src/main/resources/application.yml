@@ -19,6 +19,7 @@ http:
       #host: es1pocmom01v
       host: localhost
       port: 8243
+      ssl-host-name-verification: false
 security:
   oauth2:
     client:
