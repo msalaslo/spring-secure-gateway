@@ -7,7 +7,7 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
 
-public class SSLHostNameVerificationUtil {
+public class SSLTemplateUtil {
 	
 	public static void setNoVerifyHostNameInSSL(OAuth2RestTemplate oAuth2RestTemplate) {
 		// request factory
