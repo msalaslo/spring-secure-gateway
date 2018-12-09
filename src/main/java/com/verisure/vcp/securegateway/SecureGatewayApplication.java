@@ -31,12 +31,24 @@ public class SecureGatewayApplication {
 
 	@Value("${server.ssl.trust-store-password}")
 	private String trustStorePassword;
+
+	@Value("${security.oauth2.client.access-token-uri}")
+    private String tokenUrl;
 	
-    private final static String TOKEN_URL = "https://es1pocmom01v:8243/token";
-    private final static String CLIENT_ID = "y8I_kYBFiA8snewZxy4WKfzduREa";  //substitute yours for it
-    private final static String CLIENT_SECRET = "2nNJnAc1kPbczQt7TQuU2TZUZ7Aa"; //substitute yours for it
-    private final static String USERNAME = "admin"; //substitute yours for it
-    private final static String PASSWORD = "admin"; //substitute yours for it
+	@Value("${security.oauth2.client.client-id}")
+    private String clientId;
+	
+	@Value("${security.oauth2.client.client-secret}")
+    private String clientSecret;
+	
+	@Value("${security.oauth2.client.grant-type}")
+    private String grantType;
+	
+	@Value("${security.oauth2.client.user-name}")
+    private  String userName;
+	
+	@Value("${security.oauth2.client.user-password}")
+    private String userPassword;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SecureGatewayApplication.class, args);
@@ -54,12 +66,12 @@ public class SecureGatewayApplication {
 	@Bean
 	OAuth2RestTemplate oauth2RestTemplate() throws Exception {
         ResourceOwnerPasswordResourceDetails resource = new ResourceOwnerPasswordResourceDetails();
-        resource.setAccessTokenUri(TOKEN_URL);
-        resource.setClientId(CLIENT_ID);
-        resource.setClientSecret(CLIENT_SECRET);
-        resource.setGrantType("password");
-        resource.setUsername(USERNAME);
-        resource.setPassword(PASSWORD);		
+        resource.setAccessTokenUri(tokenUrl);
+        resource.setClientId(clientId);
+        resource.setClientSecret(clientSecret);
+        resource.setGrantType(grantType);
+        resource.setUsername(userName);
+        resource.setPassword(userPassword);		
         OAuth2RestTemplate oAuth2RestTemplate = new OAuth2RestTemplate(resource);
         // TODO: Remove when we have a CA Signed certificate in the backend
         this.setNoSSL(oAuth2RestTemplate); //to ignore ssl

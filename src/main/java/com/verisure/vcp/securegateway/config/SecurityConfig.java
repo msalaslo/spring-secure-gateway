@@ -13,24 +13,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http
-			.authorizeRequests()
-				.anyRequest().authenticated()
-			.and()
-				.x509()
-					.subjectPrincipalRegex("CN=(.*?)(?:,|$)")
-					.userDetailsService(userDetailsService());
+		http.authorizeRequests().anyRequest().authenticated().and().x509().subjectPrincipalRegex("CN=(.*?)(?:,|$)")
+				.userDetailsService(userDetailsService());
 	}
-	
+
 	@Bean
-    public UserDetailsService userDetailsService() {
-		//TODO apply actual authentication: one certificate will be associated to a Oauth2 credential of APIManager 
-        return (username -> {
-        	if (username.equals("apimanager-secure-client") || username.equals("apimanager-secure-client-2")) {
-                return new User(username, "", AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
-            }else{
-            	return new User(username, "", false, false, true, true,  AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));   
-            }
-        });
-    }
+	public UserDetailsService userDetailsService() {
+		// TODO apply actual authentication: one certificate will be associated to a
+		// Oauth2 credential of APIManager
+		return (username -> {
+			if (username.equals("apimanager-secure-client") || username.equals("apimanager-secure-client-2")) {
+				return new User(username, "", AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
+			} else {
+				return new User(username, "", false, false, true, true,
+						AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
+			}
+		});
+	}
 }

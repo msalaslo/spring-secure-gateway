@@ -14,10 +14,20 @@ server:
     client-auth: need
 http:
   client:
-    ssl:
-      trust-store: classpath:server-truststore.jks
-      trust-store-password: secret
     backend: 
       protocol: https
-      host: es1pocmom01v
+      #host: es1pocmom01v
+      host: localhost
       port: 8243
+security:
+  oauth2:
+    client:
+      #access-token-uri: https://es1pocmom01v:8243/token
+      #client-id: y8I_kYBFiA8snewZxy4WKfzduREa
+      #client-secret: 2nNJnAc1kPbczQt7TQuU2TZUZ7Aa
+      access-token-uri: https://localhost:8243/token
+      client-id: ICLIQ5F4p_3Vv9DtttQz6Yano_8a
+      client-secret: St_O2ci3Z3sRUcSRek3Y0BqunoMa
+      grant-type: client-credentials
+      user-name: admin
+      user-password: admin

@@ -27,24 +27,19 @@ public class GatewayController {
 	@Value( "${http.client.backend.port}" )
 	private String backendPort;
 	
-	@Autowired
-	private RestTemplate restTemplate;
+//	@Autowired
+//	private RestTemplate restTemplate;
 	
 	@Autowired
 	private OAuth2RestTemplate oauth2RestTemplate;
 
-	@GetMapping("/")
+	@GetMapping("/test")
 	public String home(Principal principal) {
 		return String.format("Hello %s!", principal.getName());
 	}
 
-	@RequestMapping(value = "/config/**")
+	@RequestMapping(value = "/**")
 	public String gateway(HttpServletRequest request) throws RestClientException, URISyntaxException{
-		return restTemplate.getForObject(new URI(getBackendUrl() + request.getRequestURI()), String.class);
-	}
-	
-	@RequestMapping(value = "/pizzashack/**")
-	public String secure(HttpServletRequest request) throws RestClientException, URISyntaxException{
 		return oauth2RestTemplate.getForObject(new URI(getBackendUrl() + request.getRequestURI()), String.class);
 	}
 	
