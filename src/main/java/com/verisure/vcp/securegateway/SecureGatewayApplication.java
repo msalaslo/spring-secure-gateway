@@ -19,8 +19,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
-import org.springframework.security.oauth2.client.token.grant.password.ResourceOwnerPasswordAccessTokenProvider;
-import org.springframework.security.oauth2.client.token.grant.password.ResourceOwnerPasswordResourceDetails;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
 import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
@@ -33,22 +33,16 @@ public class SecureGatewayApplication {
 	private String trustStorePassword;
 
 	@Value("${security.oauth2.client.access-token-uri}")
-    private String tokenUrl;
-	
+	private String tokenUrl;
+
 	@Value("${security.oauth2.client.client-id}")
-    private String clientId;
-	
+	private String clientId;
+
 	@Value("${security.oauth2.client.client-secret}")
-    private String clientSecret;
-	
+	private String clientSecret;
+
 	@Value("${security.oauth2.client.grant-type}")
-    private String grantType;
-	
-	@Value("${security.oauth2.client.user-name}")
-    private  String userName;
-	
-	@Value("${security.oauth2.client.user-password}")
-    private String userPassword;
+	private String grantType;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SecureGatewayApplication.class, args);
@@ -62,20 +56,18 @@ public class SecureGatewayApplication {
 		HttpComponentsClientHttpRequestFactory factory = getNoHostnameVerifierFactory(sslContext);
 		return new RestTemplate(factory);
 	}
-	
+
 	@Bean
 	OAuth2RestTemplate oauth2RestTemplate() throws Exception {
-        ResourceOwnerPasswordResourceDetails resource = new ResourceOwnerPasswordResourceDetails();
-        resource.setAccessTokenUri(tokenUrl);
-        resource.setClientId(clientId);
-        resource.setClientSecret(clientSecret);
-        resource.setGrantType(grantType);
-        resource.setUsername(userName);
-        resource.setPassword(userPassword);		
-        OAuth2RestTemplate oAuth2RestTemplate = new OAuth2RestTemplate(resource);
-        // TODO: Remove when we have a CA Signed certificate in the backend
-        this.setNoSSL(oAuth2RestTemplate); //to ignore ssl
-        return oAuth2RestTemplate;
+		ClientCredentialsResourceDetails resource = new ClientCredentialsResourceDetails();
+		resource.setAccessTokenUri(tokenUrl);
+		resource.setClientId(clientId);
+		resource.setClientSecret(clientSecret);
+
+		OAuth2RestTemplate oAuth2RestTemplate = new OAuth2RestTemplate(resource);
+		// TODO: Remove when we have a CA Signed certificate in the backend
+		this.setNoSSL(oAuth2RestTemplate); // to ignore ssl
+		return oAuth2RestTemplate;
 	}
 
 	private HttpComponentsClientHttpRequestFactory getNoHostnameVerifierFactory(SSLContext sslContext) {
@@ -85,14 +77,15 @@ public class SecureGatewayApplication {
 		HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
 		return factory;
 	}
-	
-    private void setNoSSL(OAuth2RestTemplate oAuth2RestTemplate) throws KeyManagementException, NoSuchAlgorithmException {
-        //request factory
-        ClientHttpRequestFactory requestFactory = new SSLContextRequestFactory();
-        oAuth2RestTemplate.setRequestFactory(requestFactory);
-        //provider
-        ResourceOwnerPasswordAccessTokenProvider provider = new ResourceOwnerPasswordAccessTokenProvider();
-        provider.setRequestFactory(requestFactory);
-        oAuth2RestTemplate.setAccessTokenProvider(provider);
-    }
+
+	private void setNoSSL(OAuth2RestTemplate oAuth2RestTemplate)
+			throws KeyManagementException, NoSuchAlgorithmException {
+		// request factory
+		ClientHttpRequestFactory requestFactory = new SSLContextRequestFactory();
+		oAuth2RestTemplate.setRequestFactory(requestFactory);
+		// provider
+		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
+		provider.setRequestFactory(requestFactory);
+		oAuth2RestTemplate.setAccessTokenProvider(provider);
+	}
 }

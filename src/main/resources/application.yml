@@ -1,6 +1,6 @@
 spring:
   application:
-    name: secure-server
+    name: secure-gateway
     
 server:
   port: 8443
@@ -29,5 +29,3 @@ security:
       client-id: ICLIQ5F4p_3Vv9DtttQz6Yano_8a
       client-secret: St_O2ci3Z3sRUcSRek3Y0BqunoMa
       grant-type: client-credentials
-      user-name: admin
-      user-password: admin

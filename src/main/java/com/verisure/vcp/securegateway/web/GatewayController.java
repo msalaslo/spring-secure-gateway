@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 @RestController
 public class GatewayController {
@@ -27,9 +26,6 @@ public class GatewayController {
 	@Value( "${http.client.backend.port}" )
 	private String backendPort;
 	
-//	@Autowired
-//	private RestTemplate restTemplate;
-	
 	@Autowired
 	private OAuth2RestTemplate oauth2RestTemplate;
 
@@ -39,7 +35,7 @@ public class GatewayController {
 	}
 
 	@RequestMapping(value = "/**")
-	public String gateway(HttpServletRequest request) throws RestClientException, URISyntaxException{
+	public String gateway(HttpServletRequest request, Principal principal) throws RestClientException, URISyntaxException{
 		return oauth2RestTemplate.getForObject(new URI(getBackendUrl() + request.getRequestURI()), String.class);
 	}
 	
