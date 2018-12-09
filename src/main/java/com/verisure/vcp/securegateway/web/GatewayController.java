@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 
+import com.verisure.vcp.securegateway.ssl.SSLHostNameVerificationUtil;
+
 @RestController
 public class GatewayController {
 	
@@ -26,6 +28,9 @@ public class GatewayController {
 	@Value( "${http.client.backend.port}" )
 	private String backendPort;
 	
+	@Value("${http.client.backend.ssl-host-name-verification}")
+	private boolean sslHostNameVerification;
+	
 	@Autowired
 	private OAuth2RestTemplate oauth2RestTemplate;
 
@@ -36,6 +41,9 @@ public class GatewayController {
 
 	@RequestMapping(value = "/**")
 	public String gateway(HttpServletRequest request, Principal principal) throws RestClientException, URISyntaxException{
+		if(!sslHostNameVerification) {
+			SSLHostNameVerificationUtil.setNoVerifyHostNameInSSL(oauth2RestTemplate);
+		}
 		return oauth2RestTemplate.getForObject(new URI(getBackendUrl() + request.getRequestURI()), String.class);
 	}
 	
