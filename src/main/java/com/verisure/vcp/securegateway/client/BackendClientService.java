@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 public class BackendClientService {
 
-	private final Logger log = LoggerFactory.getLogger(this.getClass());
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Value("${http.client.backend.protocol}")
 	private String backendProtocol;
@@ -37,45 +36,43 @@ public class BackendClientService {
 
 	@Autowired
 	private OAuth2RestTemplate oauth2RestTemplate;
-	
+
 	@RequestMapping(value = "/**")
 	public ResponseEntity<String> gateway(HttpServletRequest request, String body, Principal principal)
-			throws RestClientException, URISyntaxException {	
+			throws BackendClientException {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
-		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);		
-		ResponseEntity<String> response = oauth2RestTemplate.postForEntity(getBackendUrl(request), requestEntity, String.class);
-		String responseBody = response.getBody();
-		if(responseBody == null) {
-			responseBody = "";
+		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
+
+		try {
+			ResponseEntity<String> response = oauth2RestTemplate.postForEntity(getBackendUrl(request), requestEntity,
+				String.class);
+			String responseBody = response.getBody();
+			if (responseBody == null) {
+				responseBody = "";
+			}
+			ResponseEntity<String> ret = new ResponseEntity<String>(responseBody, response.getHeaders(),
+					response.getStatusCode());
+			return ret;
+		}catch(Exception e) {
+			logger.error("Error in POST", e);
+			throw new RestClientException("Error.", e);
 		}
-		ResponseEntity<String> ret = new ResponseEntity<String>(responseBody, response.getHeaders(), response.getStatusCode());
-		return ret;
+
 	}
-	
+
 	@RequestMapping(value = "/**")
 	public Object patchGateway(HttpServletRequest request, String body, Principal principal)
-			throws RestClientException, URISyntaxException {	
+			throws RestClientException, BackendClientException {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
-		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);		
-		//https://jira.spring.io/browse/SPR-15052
-		Object response = oauth2RestTemplate.postForObject(getBackendUrl(request) + "?_method=patch", requestEntity, String.class);		
+		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
+		Object response = oauth2RestTemplate.patchForObject(getBackendUrl(request), requestEntity, String.class);
 		return response;
 	}
-	
+
 	@RequestMapping(value = "/**")
 	public ResponseEntity<String> gateway(HttpServletRequest request, Principal principal)
-			throws RestClientException, URISyntaxException {
+			throws BackendClientException {
 		ResponseEntity<String> response = oauth2RestTemplate.getForEntity(getBackendUrl(request), String.class);
-		return response;
-	}
-	
-	@RequestMapping(value = "/**")
-	public ResponseEntity<String> exchangeGateway(HttpServletRequest request, String body, Principal principal)
-			throws RestClientException, URISyntaxException {		
-		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
-		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);		
-		//No funciona bien con GET
-		ResponseEntity<String> response = oauth2RestTemplate.exchange(getBackendUrl(request), HttpMethod.resolve(request.getMethod()), requestEntity, String.class);
 		return response;
 	}
 
@@ -92,7 +89,13 @@ public class BackendClientService {
 		return requestHeaders;
 	}
 
-	private URI getBackendUrl(HttpServletRequest request) throws URISyntaxException {
-		return new URI(backendProtocol + "://" + backendHost + ":" + backendPort + request.getRequestURI());
+	private URI getBackendUrl(HttpServletRequest request) throws BackendClientException {
+		try {
+			return new URI(backendProtocol + "://" + backendHost + ":" + backendPort + request.getRequestURI());
+		} catch (URISyntaxException e) {
+			logger.error("Exception generating backend URL:" + e.getMessage());
+			throw new BackendClientException(e);
+		}
 	}
+
 }

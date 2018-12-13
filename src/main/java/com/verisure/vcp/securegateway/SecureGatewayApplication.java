@@ -3,29 +3,28 @@ package com.verisure.vcp.securegateway;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
 
-import javax.net.ssl.SSLContext;
+import javax.annotation.PostConstruct;
 
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.TrustStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
 
-import com.verisure.vcp.securegateway.ssl.SSLContextRequestNoHostnameVerifierFactory;
-
 @SpringBootApplication
 public class SecureGatewayApplication {
+
+	private static final Logger logger = LoggerFactory.getLogger(SecureGatewayApplication.class);
 
 	@Value("${security.oauth2.client.access-token-uri}")
 	private String tokenUrl;
@@ -41,6 +40,21 @@ public class SecureGatewayApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(SecureGatewayApplication.class, args);
+			
+	}
+	
+	@PostConstruct
+	public void initSsl(){
+//		System.setProperty("javax.net.ssl.trustStore", Thread.currentThread().getContextClassLoader().getResource("server-truststore.jks").getPath());
+		System.setProperty("javax.net.ssl.trustStorePassword", "secret");
+		
+		javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
+			(hostname,sslSession) -> {
+				if (hostname.equals("localhost") || hostname.startsWith("es1pocmom01v")) {
+					return true;
+				}
+				return false;
+			});
 	}
 
 	@Bean
@@ -65,7 +79,9 @@ public class SecureGatewayApplication {
 
 	private static void setNoVerifyHostNameInSSL(OAuth2RestTemplate oAuth2RestTemplate)
 			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
-		//ClientHttpRequestFactory requestFactory = new SSLContextRequestNoHostnameVerifierFactory();
+		logger.info("Setting no name host verification in SSL handshake");
+		// ClientHttpRequestFactory requestFactory = new
+		// SSLContextRequestNoHostnameVerifierFactory();
 		HttpComponentsClientHttpRequestFactory requestFactory = getRequestFactory();
 		oAuth2RestTemplate.setRequestFactory(requestFactory);
 		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
@@ -73,14 +89,10 @@ public class SecureGatewayApplication {
 		oAuth2RestTemplate.setAccessTokenProvider(provider);
 	}
 
-	private static HttpComponentsClientHttpRequestFactory getRequestFactory() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
-		TrustStrategy acceptingTrustStrategy = (X509Certificate[] chain, String authType) -> true;
-
-		SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy)
+	private static HttpComponentsClientHttpRequestFactory getRequestFactory()
+			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
 				.build();
-
-		SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf).build();
 		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 		requestFactory.setHttpClient(httpClient);
 		return requestFactory;
