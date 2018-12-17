@@ -31,30 +31,30 @@ public class GatewayController {
 	@GetMapping(value = "/**")
 	public ResponseEntity<String> getGateway(HttpServletRequest request, Principal principal)
 			throws RestClientException {
-		return service.gateway(request, principal);
+		return service.get(request, principal);
 	}
 	
 	@PatchMapping(value = "/**")
 	public Object patchGateway(HttpServletRequest request, @RequestBody String json, Principal principal)
 			throws RestClientException {
-		return service.patchGateway(request, json, principal);
+		return service.patch(request, json, principal);
 	}
 	
 	@RequestMapping(value = "/**")
 	public ResponseEntity<String> postGateway(HttpServletRequest request, @RequestBody String json, Principal principal)
 			throws RestClientException {
-		return service.gateway(request, json, principal);
+		return service.post(request, json, principal);
 	}
 
 	@DeleteMapping(value = "/**")
 	public ResponseEntity<String> deleteGateway(HttpServletRequest request, Principal principal)
 			throws RestClientException {
-		return service.gateway(request, principal);
+		return service.get(request, principal);
 	}
 
 	@PutMapping(value = "/**")
 	public ResponseEntity<String> putGateway(HttpServletRequest request, @RequestBody String json, Principal principal)
 			throws RestClientException {
-		return service.gateway(request, json, principal);
+		return service.post(request, json, principal);
 	}
 }

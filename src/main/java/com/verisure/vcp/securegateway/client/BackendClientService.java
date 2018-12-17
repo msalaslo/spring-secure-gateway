@@ -17,7 +17,6 @@ import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.client.RestClientException;
 
 @Service
@@ -37,8 +36,7 @@ public class BackendClientService {
 	@Autowired
 	private OAuth2RestTemplate oauth2RestTemplate;
 
-	@RequestMapping(value = "/**")
-	public ResponseEntity<String> gateway(HttpServletRequest request, String body, Principal principal) {
+	public ResponseEntity<String> post(HttpServletRequest request, String body, Principal principal) {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
 		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
 		ResponseEntity<String> response = oauth2RestTemplate.postForEntity(getBackendUrl(request), requestEntity,
@@ -51,15 +49,13 @@ public class BackendClientService {
 
 	}
 
-	@RequestMapping(value = "/**")
-	public Object patchGateway(HttpServletRequest request, String body, Principal principal) {
+	public Object patch(HttpServletRequest request, String body, Principal principal) {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
 		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
 		return oauth2RestTemplate.patchForObject(getBackendUrl(request), requestEntity, String.class);
 	}
 
-	@RequestMapping(value = "/**")
-	public ResponseEntity<String> gateway(HttpServletRequest request, Principal principal)
+	public ResponseEntity<String> get(HttpServletRequest request, Principal principal)
 			throws RestClientException {
 		return oauth2RestTemplate.getForEntity(getBackendUrl(request), String.class);
 	}

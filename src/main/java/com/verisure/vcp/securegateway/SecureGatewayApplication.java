@@ -15,8 +15,6 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,8 +31,6 @@ import com.verisure.vcp.securegateway.web.RestTemplateResponseErrorHandler;
 @SpringBootApplication
 public class SecureGatewayApplication {
 
-	private static final Logger logger = LoggerFactory.getLogger(SecureGatewayApplication.class);
-
 	@Value("${security.oauth2.client.access-token-uri}")
 	private String tokenUrl;
 
@@ -49,13 +45,12 @@ public class SecureGatewayApplication {
 	
 	@Value("${server.ssl.trust-store}")
 	private Resource truststore;
-	
+
 	@Value("${server.ssl.trust-store-password}")
 	private String truststorePassword;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SecureGatewayApplication.class, args);
-
 	}
 
 	@Bean
@@ -88,21 +83,20 @@ public class SecureGatewayApplication {
 			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
 		CloseableHttpClient httpClient;
 		HostnameVerifier hostNameVerifier;
+		SSLContext sslContext;
+		SSLConnectionSocketFactory socketFactory;
+		HttpComponentsClientHttpRequestFactory requestFactory;
+
 		if (sslHostNameVerification) {
 			hostNameVerifier = new DefaultHostnameVerifier();
 		} else {
 			hostNameVerifier = new NoopHostnameVerifier();
 		}
-		
-		SSLContext sslContext = new SSLContextBuilder()
-                .loadTrustMaterial(
-                		truststore.getURL(),
-                        truststorePassword.toCharArray()
-                ).build();
-		SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext, hostNameVerifier);
-		
+
+		sslContext = new SSLContextBuilder().loadTrustMaterial(truststore.getURL(), truststorePassword.toCharArray()).build();
+		socketFactory = new SSLConnectionSocketFactory(sslContext, hostNameVerifier);
 		httpClient = HttpClients.custom().setSSLSocketFactory(socketFactory).build();
-		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+		requestFactory = new HttpComponentsClientHttpRequestFactory();
 		requestFactory.setHttpClient(httpClient);
 		return requestFactory;
 	}
