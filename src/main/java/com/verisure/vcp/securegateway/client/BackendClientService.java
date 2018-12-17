@@ -38,42 +38,30 @@ public class BackendClientService {
 	private OAuth2RestTemplate oauth2RestTemplate;
 
 	@RequestMapping(value = "/**")
-	public ResponseEntity<String> gateway(HttpServletRequest request, String body, Principal principal)
-			throws BackendClientException {
+	public ResponseEntity<String> gateway(HttpServletRequest request, String body, Principal principal) {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
 		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
-
-		try {
-			ResponseEntity<String> response = oauth2RestTemplate.postForEntity(getBackendUrl(request), requestEntity,
+		ResponseEntity<String> response = oauth2RestTemplate.postForEntity(getBackendUrl(request), requestEntity,
 				String.class);
-			String responseBody = response.getBody();
-			if (responseBody == null) {
-				responseBody = "";
-			}
-			ResponseEntity<String> ret = new ResponseEntity<String>(responseBody, response.getHeaders(),
-					response.getStatusCode());
-			return ret;
-		}catch(Exception e) {
-			logger.error("Error in POST", e);
-			throw new RestClientException("Error.", e);
+		String responseBody = response.getBody();
+		if (responseBody == null) {
+			responseBody = "";
 		}
+		return new ResponseEntity<String>(responseBody, response.getHeaders(), response.getStatusCode());
 
 	}
 
 	@RequestMapping(value = "/**")
-	public Object patchGateway(HttpServletRequest request, String body, Principal principal)
-			throws RestClientException, BackendClientException {
+	public Object patchGateway(HttpServletRequest request, String body, Principal principal) {
 		MultiValueMap<String, String> requestHeaders = extractHeaders(request);
 		HttpEntity<String> requestEntity = new HttpEntity<>(body, requestHeaders);
-		Object response = oauth2RestTemplate.patchForObject(getBackendUrl(request), requestEntity, String.class);
-		return response;
+		return oauth2RestTemplate.patchForObject(getBackendUrl(request), requestEntity, String.class);
 	}
 
 	@RequestMapping(value = "/**")
 	public ResponseEntity<String> gateway(HttpServletRequest request, Principal principal)
-			throws BackendClientException {
-		ResponseEntity<String> response = oauth2RestTemplate.getForEntity(getBackendUrl(request), String.class);
-		return response;
+			throws RestClientException {
+		return oauth2RestTemplate.getForEntity(getBackendUrl(request), String.class);
 	}
 
 	private MultiValueMap<String, String> extractHeaders(HttpServletRequest request) {
@@ -89,12 +77,13 @@ public class BackendClientService {
 		return requestHeaders;
 	}
 
-	private URI getBackendUrl(HttpServletRequest request) throws BackendClientException {
+	private URI getBackendUrl(HttpServletRequest request) throws RestClientException {
 		try {
 			return new URI(backendProtocol + "://" + backendHost + ":" + backendPort + request.getRequestURI());
 		} catch (URISyntaxException e) {
-			logger.error("Exception generating backend URL:" + e.getMessage());
-			throw new BackendClientException(e);
+			String msg = "Exception generating backend URL:";
+			logger.error(msg + e.getMessage());
+			throw new RestClientException(msg, e);
 		}
 	}
 
