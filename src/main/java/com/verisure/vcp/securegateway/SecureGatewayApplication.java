@@ -5,7 +5,9 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 
 import javax.annotation.PostConstruct;
+import javax.net.ssl.HostnameVerifier;
 
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -20,6 +22,8 @@ import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
+
+import com.verisure.vcp.securegateway.web.RestTemplateResponseErrorHandler;
 
 @SpringBootApplication
 public class SecureGatewayApplication {
@@ -40,32 +44,22 @@ public class SecureGatewayApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(SecureGatewayApplication.class, args);
-			
+
 	}
-	
+
 	@PostConstruct
-	public void initSsl(){
-//		System.setProperty("javax.net.ssl.trustStore", Thread.currentThread().getContextClassLoader().getResource("server-truststore.jks").getPath());
+	public void initSsl() {
+		System.setProperty("javax.net.ssl.trustStore",
+				Thread.currentThread().getContextClassLoader().getResource("server-truststore.jks").getPath());
 		System.setProperty("javax.net.ssl.trustStorePassword", "secret");
-		
-		javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
-			(hostname,sslSession) -> {
-				if (hostname.equals("localhost") || hostname.startsWith("es1pocmom01v")) {
-					return true;
-				}
-				return false;
-			});
 	}
 
 	@Bean
 	OAuth2RestTemplate oauth2RestTemplate() throws Exception {
 		OAuth2ProtectedResourceDetails resource = getClientCredentialsResource();
 		OAuth2RestTemplate oauth2RestTemplate = new OAuth2RestTemplate(resource);
-		// oauth2RestTemplate.setInterceptors(Collections.singletonList(new
-		// RequestResponseLoggingInterceptor()));
-		if (!sslHostNameVerification) {
-			setNoVerifyHostNameInSSL(oauth2RestTemplate);
-		}
+		setClientCredentialsAccessTokenProvider(oauth2RestTemplate);
+		oauth2RestTemplate.setErrorHandler(new RestTemplateResponseErrorHandler());
 		return oauth2RestTemplate;
 	}
 
@@ -77,11 +71,8 @@ public class SecureGatewayApplication {
 		return resource;
 	}
 
-	private static void setNoVerifyHostNameInSSL(OAuth2RestTemplate oAuth2RestTemplate)
+	private void setClientCredentialsAccessTokenProvider(OAuth2RestTemplate oAuth2RestTemplate)
 			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
-		logger.info("Setting no name host verification in SSL handshake");
-		// ClientHttpRequestFactory requestFactory = new
-		// SSLContextRequestNoHostnameVerifierFactory();
 		HttpComponentsClientHttpRequestFactory requestFactory = getRequestFactory();
 		oAuth2RestTemplate.setRequestFactory(requestFactory);
 		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
@@ -89,10 +80,16 @@ public class SecureGatewayApplication {
 		oAuth2RestTemplate.setAccessTokenProvider(provider);
 	}
 
-	private static HttpComponentsClientHttpRequestFactory getRequestFactory()
+	private HttpComponentsClientHttpRequestFactory getRequestFactory()
 			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
-				.build();
+		CloseableHttpClient httpClient;
+		HostnameVerifier hostNameVerifier;
+		if (sslHostNameVerification) {
+			hostNameVerifier = new DefaultHostnameVerifier();
+		} else {
+			hostNameVerifier = new NoopHostnameVerifier();
+		}
+		httpClient = HttpClients.custom().setSSLHostnameVerifier(hostNameVerifier).build();
 		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 		requestFactory.setHttpClient(httpClient);
 		return requestFactory;
