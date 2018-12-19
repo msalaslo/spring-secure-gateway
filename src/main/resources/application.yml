@@ -24,6 +24,7 @@ http:
     backend: 
       protocol: https
       host: es1pocmom01v
+      #host: es1pocmom01v.sp.securitasdirect
       #host: localhost
       port: 8243
       ssl-host-name-verification: false

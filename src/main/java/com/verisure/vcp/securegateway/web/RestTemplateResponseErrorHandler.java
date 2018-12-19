@@ -8,6 +8,8 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResponseErrorHandler;
 
+import com.verisure.vcp.securegateway.util.BufferingClientHttpResponseWrapper;
+
 /**
  * Include this error handler in order to return the same error message returned by the back-end service to the client
  * 
@@ -20,13 +22,15 @@ public class RestTemplateResponseErrorHandler implements ResponseErrorHandler {
 
 	@Override
 	public boolean hasError(ClientHttpResponse httpResponse) throws IOException {
-		return (httpResponse.getStatusCode().series() == HttpStatus.Series.CLIENT_ERROR
+		boolean ret = (httpResponse.getStatusCode().series() == HttpStatus.Series.CLIENT_ERROR
 				|| httpResponse.getStatusCode().series() == HttpStatus.Series.SERVER_ERROR);
+		return ret;
 	}
 
 	@Override
 	public void handleError(ClientHttpResponse httpResponse) throws IOException {
 		ResponseEntity.status(httpResponse.getRawStatusCode()).headers(httpResponse.getHeaders())
 				.body(httpResponse.getBody());
+		httpResponse.close();
 	}
 }

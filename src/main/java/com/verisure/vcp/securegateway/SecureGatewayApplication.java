@@ -5,6 +5,8 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -20,12 +22,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
+import org.springframework.util.CollectionUtils;
 
+import com.verisure.vcp.securegateway.util.ResponseWrapperInterceptor;
 import com.verisure.vcp.securegateway.web.RestTemplateResponseErrorHandler;
 
 @SpringBootApplication
@@ -42,7 +47,7 @@ public class SecureGatewayApplication {
 
 	@Value("${http.client.backend.ssl-host-name-verification}")
 	private boolean sslHostNameVerification;
-	
+
 	@Value("${server.ssl.trust-store}")
 	private Resource truststore;
 
@@ -58,6 +63,15 @@ public class SecureGatewayApplication {
 		OAuth2ProtectedResourceDetails resource = getClientCredentialsResource();
 		OAuth2RestTemplate oauth2RestTemplate = new OAuth2RestTemplate(resource);
 		setClientCredentialsAccessTokenProvider(oauth2RestTemplate);
+
+		List<ClientHttpRequestInterceptor> interceptors = oauth2RestTemplate.getInterceptors();
+		if (CollectionUtils.isEmpty(interceptors)) {
+			interceptors = new ArrayList<>();
+		}
+	
+		interceptors.add(new ResponseWrapperInterceptor());
+		
+		oauth2RestTemplate.setInterceptors(interceptors);
 		oauth2RestTemplate.setErrorHandler(new RestTemplateResponseErrorHandler());
 		return oauth2RestTemplate;
 	}
@@ -71,7 +85,8 @@ public class SecureGatewayApplication {
 	}
 
 	private void setClientCredentialsAccessTokenProvider(OAuth2RestTemplate oAuth2RestTemplate)
-			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
+			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException,
+			IOException {
 		HttpComponentsClientHttpRequestFactory requestFactory = getRequestFactory();
 		oAuth2RestTemplate.setRequestFactory(requestFactory);
 		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
@@ -79,8 +94,8 @@ public class SecureGatewayApplication {
 		oAuth2RestTemplate.setAccessTokenProvider(provider);
 	}
 
-	private HttpComponentsClientHttpRequestFactory getRequestFactory()
-			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
+	private HttpComponentsClientHttpRequestFactory getRequestFactory() throws KeyManagementException,
+			NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
 		CloseableHttpClient httpClient;
 		HostnameVerifier hostNameVerifier;
 		SSLContext sslContext;
@@ -93,7 +108,8 @@ public class SecureGatewayApplication {
 			hostNameVerifier = new NoopHostnameVerifier();
 		}
 
-		sslContext = new SSLContextBuilder().loadTrustMaterial(truststore.getURL(), truststorePassword.toCharArray()).build();
+		sslContext = new SSLContextBuilder().loadTrustMaterial(truststore.getURL(), truststorePassword.toCharArray())
+				.build();
 		socketFactory = new SSLConnectionSocketFactory(sslContext, hostNameVerifier);
 		httpClient = HttpClients.custom().setSSLSocketFactory(socketFactory).build();
 		requestFactory = new HttpComponentsClientHttpRequestFactory();
