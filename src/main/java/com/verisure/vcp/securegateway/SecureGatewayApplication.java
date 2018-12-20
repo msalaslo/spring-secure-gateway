@@ -5,8 +5,6 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -22,16 +20,29 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
-import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
 import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
-import org.springframework.util.CollectionUtils;
 
-import com.verisure.vcp.securegateway.util.ResponseWrapperInterceptor;
 import com.verisure.vcp.securegateway.web.RestTemplateResponseErrorHandler;
+
+/**
+ * Secured Gateway application: for mutual SSL with client and OAuth2 with the backend
+ * Enable and require client authentication by certificate
+ * Establish an Oauth2 authentication (client-credentials grant) with the backend
+ * 
+ * Allows to configure Non Host Name Verification in SSL handshake with the backend, only for DEV environments
+ * 
+ * Adds a response wrapper to allow read the response more than one time. It allows to add Error handler that reads the response
+ * 
+ * The response handler returns the same backend error to the client
+ * 
+ * @author miguel.salas
+ *
+ */
 
 @SpringBootApplication
 public class SecureGatewayApplication {
@@ -61,19 +72,12 @@ public class SecureGatewayApplication {
 	@Bean
 	OAuth2RestTemplate oauth2RestTemplate() throws Exception {
 		OAuth2ProtectedResourceDetails resource = getClientCredentialsResource();
-		OAuth2RestTemplate oauth2RestTemplate = new OAuth2RestTemplate(resource);
-		setClientCredentialsAccessTokenProvider(oauth2RestTemplate);
-
-		List<ClientHttpRequestInterceptor> interceptors = oauth2RestTemplate.getInterceptors();
-		if (CollectionUtils.isEmpty(interceptors)) {
-			interceptors = new ArrayList<>();
-		}
-	
-		interceptors.add(new ResponseWrapperInterceptor());
-		
-		oauth2RestTemplate.setInterceptors(interceptors);
-		oauth2RestTemplate.setErrorHandler(new RestTemplateResponseErrorHandler());
-		return oauth2RestTemplate;
+		OAuth2RestTemplate oAuth2RestTemplate = new OAuth2RestTemplate(resource);
+		HttpComponentsClientHttpRequestFactory sslRequestFactory = getSSLRequestFactory(); 
+		addRequestResponseWrapper(oAuth2RestTemplate, sslRequestFactory);
+		setClientCredentialsAccessTokenProvider(oAuth2RestTemplate, sslRequestFactory);	
+		oAuth2RestTemplate.setErrorHandler(new RestTemplateResponseErrorHandler());
+		return oAuth2RestTemplate;
 	}
 
 	private ClientCredentialsResourceDetails getClientCredentialsResource() {
@@ -83,18 +87,20 @@ public class SecureGatewayApplication {
 		resource.setClientSecret(clientSecret);
 		return resource;
 	}
-
-	private void setClientCredentialsAccessTokenProvider(OAuth2RestTemplate oAuth2RestTemplate)
-			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException,
-			IOException {
-		HttpComponentsClientHttpRequestFactory requestFactory = getRequestFactory();
-		oAuth2RestTemplate.setRequestFactory(requestFactory);
-		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
-		provider.setRequestFactory(requestFactory);
-		oAuth2RestTemplate.setAccessTokenProvider(provider);
+	
+	private void addRequestResponseWrapper(OAuth2RestTemplate oAuth2RestTemplate, HttpComponentsClientHttpRequestFactory requestFactory){
+		oAuth2RestTemplate.setRequestFactory(new BufferingClientHttpRequestFactory(requestFactory));
 	}
 
-	private HttpComponentsClientHttpRequestFactory getRequestFactory() throws KeyManagementException,
+	private void setClientCredentialsAccessTokenProvider(OAuth2RestTemplate oAuth2RestTemplate, HttpComponentsClientHttpRequestFactory requestFactory)
+			throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException, CertificateException,
+			IOException {
+		ClientCredentialsAccessTokenProvider provider = new ClientCredentialsAccessTokenProvider();
+		provider.setRequestFactory(requestFactory);
+		oAuth2RestTemplate.setAccessTokenProvider(provider);		
+	}
+
+	private HttpComponentsClientHttpRequestFactory getSSLRequestFactory() throws KeyManagementException,
 			NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
 		CloseableHttpClient httpClient;
 		HostnameVerifier hostNameVerifier;

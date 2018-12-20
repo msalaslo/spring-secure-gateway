@@ -8,8 +8,6 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResponseErrorHandler;
 
-import com.verisure.vcp.securegateway.util.BufferingClientHttpResponseWrapper;
-
 /**
  * Include this error handler in order to return the same error message returned by the back-end service to the client
  * 
